@@ -1,14 +1,12 @@
-import os, requests, asyncio
+import os, requests
 from telethon import TelegramClient, events, Button
-from telethon.sessions import StringSession
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN") # BotFather wala token
 GOFILE_TOKEN = os.getenv("GOFILE_TOKEN")
-SESSION = os.getenv("SESSION_STRING")
-CHANNEL_ID = -1003984525744  # tumhara channel
 
-client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
+client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 os.makedirs("downloads", exist_ok=True)
 
 def upload_gofile(path):
@@ -23,76 +21,34 @@ def upload_gofile(path):
     except Exception as e:
         return "Error: " + str(e)
 
-# /start command
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
     await event.reply(
-        "**👋 Auto Upload Bot**\n\n"
-        "Main tumhare `Save file` channel ki files ko auto Gofile par upload kar dunga.\n\n"
+        "**👋 Gofile Upload Bot**\n\n"
+        "Mujhe koi bhi file bhej do, main Gofile ka link de dunga.\n\n"
         "**Commands:**\n"
         "/help - Help\n"
-        "/status - Bot status\n"
-        "/wizard - Setup guide",
-        buttons=[
-            [Button.inline("🚀 Start Wizard", b'wizard')],
-            [Button.inline("📊 Status", b'status')]
-        ]
+        "/status - Bot status"
     )
 
-# /help command
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
-    await event.reply(
-        "**📖 Commands List**\n\n"
-        "/start - Bot shuru karo\n"
-        "/help - Ye message\n"
-        "/status - Bot status\n"
-        "/wizard - Setup guide\n"
-        "Bas `Save file` channel mein file bhej do, main auto upload kar dunga."
-    )
+    await event.reply("Bas mujhe PM mein file bhej do. Main auto upload karke link de dunga ✅")
 
-# /status command
-@client.on(events.NewMessage(pattern='/status'))
-async def status(event):
-    await event.reply(f"✅ Bot Active hai\n📡 Monitoring Channel: `{CHANNEL_ID}`")
-
-# /wizard command
-@client.on(events.NewMessage(pattern='/wizard'))
-async def wizard(event):
-    await event.reply(
-        "**🧙 Setup Wizard**\n\n"
-        "Step 1: Bas `Save file` channel mein koi file bhej do.\n"
-        "Step 2: Main usko auto download karke Gofile link de dunga.\n\n"
-        "Ho gaya kaam!"
-    )
-
-# Button clicks
-@client.on(events.CallbackQuery)
-async def callback(event):
-    if event.data == b'wizard':
-        await wizard(event)
-    if event.data == b'status':
-        await status(event)
-
-# Auto upload from channel - YAHAN FIX KIYA HAI
-@client.on(events.NewMessage(chats=CHANNEL_ID, outgoing=True)) # <-- outgoing=True add kiya
+# YEHI MAIN KAAM HAI
+@client.on(events.NewMessage(func=lambda e: e.media)) # Koi bhi file aaye
 async def auto_upload(event):
-    if event.media:
-        msg = await event.reply("📥 Downloading... 0%")
-        try:
-            path = await event.download_media("downloads/")
-            size = round(os.path.getsize(path)/1024/1024, 2)
-            await msg.edit(f"📤 Uploading to Gofile...\n`{os.path.basename(path)}` - {size} MB")
-            
-            link = upload_gofile(path)
-            await msg.edit(f"✅ Upload Complete!\n\n📁 **Link:** {link}")
-            os.remove(path)
-        except Exception as e:
-            await msg.edit(f"❌ Error: {e}")
+    msg = await event.reply("📥 Downloading... 0%")
+    try:
+        path = await event.download_media("downloads/")
+        size = round(os.path.getsize(path)/1024/1024, 2)
+        await msg.edit(f"📤 Uploading to Gofile...\n`{os.path.basename(path)}` - {size} MB")
+        
+        link = upload_gofile(path)
+        await msg.edit(f"✅ Upload Complete!\n\n📁 **Link:** {link}")
+        os.remove(path)
+    except Exception as e:
+        await msg.edit(f"❌ Error: {e}")
 
-async def main():
-    await client.start()
-    print(f"Bot Started... Monitoring Channel: {CHANNEL_ID}")
-    await client.run_until_disconnected()
-
-client.loop.run_until_complete(main())
+print("Bot Started... PM mein file bhejo")
+client.run_until_disconnected()
