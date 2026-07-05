@@ -8,19 +8,23 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 os.makedirs("downloads", exist_ok=True)
 
-FOLDER_ID = None # Folder ID yahan save hogi
+FOLDER_ID = None # Spelling theek kar di
 
 def create_gofile_folder():
     global FOLDER_ID
-    if FOLDER_ID: return FOLDER_ID
-    
-    url = "https://api.gofile.io/createFolder"
-    data = {'folderName': 'Telegram Uploads'} # Folder ka naam
-    res = requests.post(url, data=data).json()
-    
-    if res['status'] == 'ok':
-        FOLDER_ID = res['data']['id']
+    if FOLDER_ID: 
         return FOLDER_ID
+    
+    try:
+        url = "https://api.gofile.io/createFolder"
+        data = {'folderName': 'Telegram Uploads'}
+        res = requests.post(url, data=data, timeout=30).json()
+        
+        if res.get('status') == 'ok':
+            FOLDER_ID = res['data']['id']
+            return FOLDER_ID
+    except:
+        pass
     return None
 
 def upload_gofile(path):
@@ -30,12 +34,12 @@ def upload_gofile(path):
         url = "https://upload.gofile.io/uploadFile"
         
         files = {'file': (filename, open(path, 'rb'))}
-        data = {'folderId': folder_id} # Is folder mein upload hoga
+        data = {'folderId': folder_id} if folder_id else {}
             
         res = requests.post(url, data=data, files=files, timeout=300).json()
         
-        if res['status'] == 'ok':
-            folder_link = f"https://gofile.io/d/{folder_id}"
+        if res.get('status') == 'ok':
+            folder_link = f"https://gofile.io/d/{folder_id}" if folder_id else "N/A"
             file_link = res['data']['downloadPage']
             return f"✅ Upload Complete!\n\n📁 **Folder:** {folder_link}\n📄 **File:** {file_link}"
         else:
