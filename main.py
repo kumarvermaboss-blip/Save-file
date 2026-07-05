@@ -11,8 +11,6 @@ CHANNEL_ID = -1003984525744  # tumhara channel
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 os.makedirs("downloads", exist_ok=True)
 
-user_state = {} # wizard ke liye
-
 def upload_gofile(path):
     try:
         url = "https://upload.gofile.io/uploadfile"
@@ -21,7 +19,7 @@ def upload_gofile(path):
         res = requests.post(url, data=data, files=files).json()
         if res['status'] == 'ok':
             return f"https://gofile.io/d/{res['data']['code']}"
-        return "Upload failed"
+        return "Upload failed: " + str(res)
     except Exception as e:
         return "Error: " + str(e)
 
@@ -32,9 +30,9 @@ async def start(event):
         "**👋 Auto Upload Bot**\n\n"
         "Main tumhare `Save file` channel ki files ko auto Gofile par upload kar dunga.\n\n"
         "**Commands:**\n"
-        "/help - Help dekhne ke liye\n"
+        "/help - Help\n"
         "/status - Bot status\n"
-        "/wizard - Setup wizard start karo",
+        "/wizard - Setup guide",
         buttons=[
             [Button.inline("🚀 Start Wizard", b'wizard')],
             [Button.inline("📊 Status", b'status')]
@@ -48,8 +46,8 @@ async def help(event):
         "**📖 Commands List**\n\n"
         "/start - Bot shuru karo\n"
         "/help - Ye message\n"
-        "/status - Bot chal raha hai ya nahi\n"
-        "/wizard - Step by step setup\n"
+        "/status - Bot status\n"
+        "/wizard - Setup guide\n"
         "Bas `Save file` channel mein file bhej do, main auto upload kar dunga."
     )
 
@@ -61,12 +59,11 @@ async def status(event):
 # /wizard command
 @client.on(events.NewMessage(pattern='/wizard'))
 async def wizard(event):
-    user_state[event.sender_id] = 'waiting'
     await event.reply(
         "**🧙 Setup Wizard**\n\n"
         "Step 1: Bas `Save file` channel mein koi file bhej do.\n"
-        "Main usko auto download karke Gofile link de dunga.\n\n"
-        "Kuch aur setting karni hai? /status check karo"
+        "Step 2: Main usko auto download karke Gofile link de dunga.\n\n"
+        "Ho gaya kaam!"
     )
 
 # Button clicks
@@ -77,8 +74,8 @@ async def callback(event):
     if event.data == b'status':
         await status(event)
 
-# Auto upload from channel
-@client.on(events.NewMessage(chats=CHANNEL_ID))
+# Auto upload from channel - YAHAN FIX KIYA HAI
+@client.on(events.NewMessage(chats=CHANNEL_ID, outgoing=True)) # <-- outgoing=True add kiya
 async def auto_upload(event):
     if event.media:
         msg = await event.reply("📥 Downloading... 0%")
