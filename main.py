@@ -16,26 +16,29 @@ def upload_gofile(path):
         url = "https://upload.gofile.io/uploadFile"
         
         files = {'file': (filename, open(path, 'rb'))}
-        data = {
-            'token': GOFILE_TOKEN, 
-            'folderId': GOFILE_FOLDER_ID
-        }
+        data = {'token': GOFILE_TOKEN, 'folderId': GOFILE_FOLDER_ID}
             
-        res = requests.post(url, data=data, files=files, timeout=600).json()
+        print(f"Uploading to: {url}") # Logs mein dikhega
+        res = requests.post(url, data=data, files=files, timeout=600)
         
-        if res.get('status') == 'ok':
+        print(f"Status Code: {res.status_code}")
+        print(f"Response: {res.text}") # Asli error yahan milega
+        
+        res_json = res.json()
+        
+        if res_json.get('status') == 'ok':
             folder_link = f"https://gofile.io/d/{GOFILE_FOLDER_ID}"
-            file_link = res['data']['downloadPage']
+            file_link = res_json['data']['downloadPage']
             return f"✅ Upload Complete!\n\n📁 **Folder:** {folder_link}\n📄 **File:** {file_link}"
         else:
-            return f"❌ Upload failed: {res.get('message')}"
+            return f"❌ Upload failed: {res_json.get('message')}"
             
     except Exception as e:
         return f"❌ Error: {e}"
 
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
-    await event.reply("**👋 Gofile Upload Bot**\nSab files 1 hi folder mein jama hongi.\nFolder: `JD4Q4K`")
+    await event.reply("Bot Active ✅\nSab files folder: `JD4Q4K` mein jayengi")
 
 @client.on(events.NewMessage(func=lambda e: e.media))
 async def auto_upload(event):
