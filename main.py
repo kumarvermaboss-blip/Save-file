@@ -1,51 +1,46 @@
 import os, requests
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
-BOT_TOKEN = os.getenv("BOT_TOKEN") # BotFather wala token
-GOFILE_TOKEN = os.getenv("GOFILE_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 os.makedirs("downloads", exist_ok=True)
 
 def upload_gofile(path):
     try:
-        url = "https://upload.gofile.io/uploadfile"
-        files = {'file': open(path, 'rb')}
-        data = {'token': GOFILE_TOKEN}
-        res = requests.post(url, data=data, files=files).json()
+        filename = os.path.basename(path)
+        url = "https://upload.gofile.io/uploadFile"
+        
+        files = {'file': (filename, open(path, 'rb'))}
+        data = {'folderId': ''}
+            
+        res = requests.post(url, data=data, files=files, timeout=300).json()
+        
         if res['status'] == 'ok':
-            return f"https://gofile.io/d/{res['data']['code']}"
-        return "Upload failed: " + str(res)
+            link = res['data']['downloadPage']
+            return f"✅ Upload Complete!\n\n📁 **Link:** {link}"
+        else:
+            return f"❌ Upload failed: {res.get('message', 'Unknown')}"
+            
     except Exception as e:
-        return "Error: " + str(e)
+        return f"❌ Error: {e}"
 
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
-    await event.reply(
-        "**👋 Gofile Upload Bot**\n\n"
-        "Mujhe koi bhi file bhej do, main Gofile ka link de dunga.\n\n"
-        "**Commands:**\n"
-        "/help - Help\n"
-        "/status - Bot status"
-    )
+    await event.reply("**👋 Gofile Upload Bot**\nMujhe koi bhi file bhej do.")
 
-@client.on(events.NewMessage(pattern='/help'))
-async def help(event):
-    await event.reply("Bas mujhe PM mein file bhej do. Main auto upload karke link de dunga ✅")
-
-# YEHI MAIN KAAM HAI
-@client.on(events.NewMessage(func=lambda e: e.media)) # Koi bhi file aaye
+@client.on(events.NewMessage(func=lambda e: e.media))
 async def auto_upload(event):
-    msg = await event.reply("📥 Downloading... 0%")
+    msg = await event.reply("📥 Downloading...")
     try:
         path = await event.download_media("downloads/")
         size = round(os.path.getsize(path)/1024/1024, 2)
         await msg.edit(f"📤 Uploading to Gofile...\n`{os.path.basename(path)}` - {size} MB")
         
-        link = upload_gofile(path)
-        await msg.edit(f"✅ Upload Complete!\n\n📁 **Link:** {link}")
+        result = upload_gofile(path)
+        await msg.edit(result)
         os.remove(path)
     except Exception as e:
         await msg.edit(f"❌ Error: {e}")
