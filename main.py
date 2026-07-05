@@ -1,4 +1,4 @@
-import os, requests
+import os, requests, asyncio
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
@@ -13,11 +13,11 @@ os.makedirs("downloads", exist_ok=True)
 def upload_gofile(path):
     url = "https://upload.gofile.io/uploadfile"
     files = {'file': open(path, 'rb')}
-    data = {'folderId': GOFILE_TOKEN}
+    data = {'token': GOFILE_TOKEN} # gofile ka token yahan dalta hai
     res = requests.post(url, data=data, files=files).json()
     if res['status'] == 'ok':
         return f"https://gofile.io/d/{res['data']['code']}"
-    return "Upload failed"
+    return "Upload failed: " + res.get('status', '')
 
 @client.on(events.NewMessage(incoming=True, from_users='me'))
 async def handler(event):
@@ -31,5 +31,9 @@ async def handler(event):
         await msg.edit(f"✅ Done 100%\n\n📁 {link}")
         os.remove(path)
 
-print("Bot Started... Ready")
-client.run_until_disconnected()
+async def main():
+    await client.start() # YE LINE ADD KI
+    print("Bot Started... Ready")
+    await client.run_until_disconnected()
+
+client.loop.run_until_complete(main())
