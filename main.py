@@ -8,28 +8,32 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 os.makedirs("downloads", exist_ok=True)
 
-FOLDER_ID = None # Spelling theek kar di
+FOLDER_FILE = "folder.txt" # Folder ID save karne ke liye
 
-def create_gofile_folder():
-    global FOLDER_ID
-    if FOLDER_ID: 
-        return FOLDER_ID
+def get_folder_id():
+    # Pehle file se check karo
+    if os.path.exists(FOLDER_FILE):
+        with open(FOLDER_FILE, "r") as f:
+            return f.read().strip()
     
+    # Nahi mili to naya banao
     try:
         url = "https://api.gofile.io/createFolder"
         data = {'folderName': 'Telegram Uploads'}
         res = requests.post(url, data=data, timeout=30).json()
         
         if res.get('status') == 'ok':
-            FOLDER_ID = res['data']['id']
-            return FOLDER_ID
+            folder_id = res['data']['id']
+            with open(FOLDER_FILE, "w") as f:
+                f.write(folder_id) # File mein save kar do
+            return folder_id
     except:
         pass
     return None
 
 def upload_gofile(path):
     try:
-        folder_id = create_gofile_folder()
+        folder_id = get_folder_id()
         filename = os.path.basename(path)
         url = "https://upload.gofile.io/uploadFile"
         
@@ -39,7 +43,7 @@ def upload_gofile(path):
         res = requests.post(url, data=data, files=files, timeout=300).json()
         
         if res.get('status') == 'ok':
-            folder_link = f"https://gofile.io/d/{folder_id}" if folder_id else "N/A"
+            folder_link = f"https://gofile.io/d/{folder_id}"
             file_link = res['data']['downloadPage']
             return f"✅ Upload Complete!\n\n📁 **Folder:** {folder_link}\n📄 **File:** {file_link}"
         else:
@@ -50,7 +54,7 @@ def upload_gofile(path):
 
 @client.on(events.NewMessage(pattern='/start'))
 async def start(event):
-    await event.reply("**👋 Gofile Upload Bot**\nMujhe koi bhi file bhej do. Sab 1 hi folder mein jama hongi.")
+    await event.reply("**👋 Gofile Upload Bot**\nSab files 1 hi folder mein jama hongi.")
 
 @client.on(events.NewMessage(func=lambda e: e.media))
 async def auto_upload(event):
